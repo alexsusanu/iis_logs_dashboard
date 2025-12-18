@@ -1,0 +1,11 @@
+.DS_Store
+venv/
+env/
+logs_dasboard/
+bin/
+include/
+lib/
+*.pyc
+__pycache__/
+test_logs
+pyvenv.cfg

@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            color: #4ec9b0;
+        }
+
+        .stats {
+            background: #252526;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            border-left: 4px solid #4ec9b0;
+        }
+
+        .filters {
+            background: #252526;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: #858585;
+            text-transform: uppercase;
+        }
+
+        input[type="text"],
+        input[type="date"],
+        select {
+            padding: 8px;
+            background: #3c3c3c;
+            border: 1px solid #555;
+            color: #d4d4d4;
+            border-radius: 3px;
+            font-size: 14px;
+        }
+
+        input[type="text"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #4ec9b0;
+        }
+
+        .file-selector {
+            max-height: 200px;
+            overflow-y: auto;
+            background: #3c3c3c;
+            border: 1px solid #555;
+            border-radius: 3px;
+            padding: 8px;
+        }
+
+        .file-checkbox {
+            display: block;
+            margin: 5px 0;
+            cursor: pointer;
+            padding: 3px;
+        }
+
+        .file-checkbox:hover {
+            background: #2a2a2a;
+        }
+
+        .file-checkbox input {
+            margin-right: 8px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #0e639c;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+
+        button:hover {
+            background: #1177bb;
+        }
+
+        button.secondary {
+            background: #555;
+        }
+
+        button.secondary:hover {
+            background: #666;
+        }
+
+        .table-container {
+            background: #252526;
+            border-radius: 4px;
+            overflow: auto;
+            max-height: calc(100vh - 500px);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            background: #2d2d30;
+            z-index: 10;
+        }
+
+        th {
+            padding: 12px 8px;
+            text-align: left;
+            border-bottom: 2px solid #4ec9b0;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        th:hover {
+            background: #3e3e42;
+        }
+
+        td {
+            padding: 8px;
+            border-bottom: 1px solid #3c3c3c;
+        }
+
+        tr:hover {
+            background: #2a2a2a;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 18px;
+            color: #858585;
+        }
+
+        .count {
+            margin: 15px 0;
+            font-size: 14px;
+            color: #858585;
+        }
+
+        .count strong {
+            color: #4ec9b0;
+        }
+
+        .file-badge {
+            background: #0e639c;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            display: inline-block;
+        }
+
+        .timestamp {
+            font-family: 'Courier New', monospace;
+            color: #ce9178;
+        }
+
+        .method-GET { color: #4ec9b0; }
+        .method-POST { color: #dcdcaa; }
+        .method-PUT { color: #569cd6; }
+        .method-DELETE { color: #f48771; }
+
+        .status-2xx { color: #4ec9b0; }
+        .status-3xx { color: #dcdcaa; }
+        .status-4xx { color: #ce9178; }
+        .status-5xx { color: #f48771; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Log Dashboard</h1>
+        
+        <div class="stats" id="stats">
+            <div class="loading">Loading data...</div>
+        </div>
+
+        <div class="filters">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label>Global Search</label>
+                    <input type="text" id="globalSearch" placeholder="Search all fields...">
+                </div>
+
+                <div class="filter-group">
+                    <label>Format</label>
+                    <select id="formatFilter">
+                        <option value="all">All Formats</option>
+                        <option value="w3svc">W3SVC Only</option>
+                        <option value="trace">Trace Only</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label>Date From</label>
+                    <input type="date" id="dateFrom">
+                </div>
+                
+                <div class="filter-group">
+                    <label>Date To</label>
+                    <input type="date" id="dateTo">
+                </div>
+            </div>
+
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label>Path/Message Contains</label>
+                    <input type="text" id="pathSearch" placeholder="e.g. /Api/PatientPortal">
+                </div>
+                
+                <div class="filter-group">
+                    <label>Method</label>
+                    <input type="text" id="methodSearch" placeholder="GET, POST, etc.">
+                </div>
+                
+                <div class="filter-group">
+                    <label>Status</label>
+                    <input type="text" id="statusSearch" placeholder="200, 443, 500, etc.">
+                </div>
+
+                <div class="filter-group">
+                    <label>IP Address</label>
+                    <input type="text" id="ipSearch" placeholder="10.115.72.4">
+                </div>
+            </div>
+
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label>Files (select multiple)</label>
+                    <div class="file-selector" id="fileSelector">
+                        <label class="file-checkbox">
+                            <input type="checkbox" value="__all__" checked> All Files
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 15px;">
+                <button onclick="applyFilters()">Apply Filters</button>
+                <button class="secondary" onclick="resetFilters()">Reset All</button>
+            </div>
+
+            <div class="count" id="resultCount"></div>
+        </div>
+
+        <div class="table-container">
+            <table id="logTable">
+                <thead>
+                    <tr id="tableHeader"></tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr><td colspan="10" class="loading">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let allData = [];
+        let filteredData = [];
+        let allFiles = [];
+        let sortColumn = null;
+        let sortAscending = true;
+
+        // Load data on page load
+        async function loadData() {
+            try {
+                const response = await fetch('/api/data');
+                allData = await response.json();
+                filteredData = allData;
+                
+                // Get unique files
+                allFiles = [...new Set(allData.map(row => row.file))].sort();
+                
+                updateStats();
+                populateFileSelector();
+                renderTable();
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('stats').innerHTML = '<div style="color: #f48771;">Error loading data</div>';
+            }
+        }
+
+        function updateStats() {
+            const stats = document.getElementById('stats');
+            stats.innerHTML = `
+                <strong>Total Entries:</strong> ${allData.length.toLocaleString()} | 
+                <strong>Files:</strong> ${allFiles.length} | 
+                <strong>Filtered:</strong> ${filteredData.length.toLocaleString()}
+            `;
+        }
+
+        function populateFileSelector() {
+            const selector = document.getElementById('fileSelector');
+            
+            allFiles.forEach(file => {
+                const label = document.createElement('label');
+                label.className = 'file-checkbox';
+                label.innerHTML = `
+                    <input type="checkbox" value="${file}" class="file-check" checked>
+                    ${file}
+                `;
+                selector.appendChild(label);
+            });
+
+            // Handle "All Files" checkbox
+            const allCheckbox = selector.querySelector('input[value="__all__"]');
+            allCheckbox.addEventListener('change', (e) => {
+                const fileChecks = selector.querySelectorAll('.file-check');
+                fileChecks.forEach(cb => cb.checked = e.target.checked);
+            });
+
+            // Handle individual file checkboxes
+            selector.addEventListener('change', (e) => {
+                if (e.target.classList.contains('file-check')) {
+                    const allChecked = [...selector.querySelectorAll('.file-check')].every(cb => cb.checked);
+                    allCheckbox.checked = allChecked;
+                }
+            });
+        }
+
+        function applyFilters() {
+            const globalSearch = document.getElementById('globalSearch').value.toLowerCase();
+            const formatFilter = document.getElementById('formatFilter').value;
+            const dateFrom = document.getElementById('dateFrom').value;
+            const dateTo = document.getElementById('dateTo').value;
+            const pathSearch = document.getElementById('pathSearch').value.toLowerCase();
+            const methodSearch = document.getElementById('methodSearch').value.toLowerCase();
+            const statusSearch = document.getElementById('statusSearch').value.toLowerCase();
+            const ipSearch = document.getElementById('ipSearch').value.toLowerCase();
+            
+            const selectedFiles = [...document.querySelectorAll('.file-check:checked')]
+                .map(cb => cb.value);
+
+            filteredData = allData.filter(row => {
+                // Format filter
+                if (formatFilter !== 'all' && row.format !== formatFilter) {
+                    return false;
+                }
+
+                // File filter
+                if (selectedFiles.length > 0 && !selectedFiles.includes(row.file)) {
+                    return false;
+                }
+
+                // Date filters
+                if (dateFrom && row.timestamp && row.timestamp < dateFrom) {
+                    return false;
+                }
+                if (dateTo && row.timestamp && row.timestamp > dateTo + ' 23:59:59') {
+                    return false;
+                }
+
+                // Path/Message filter
+                if (pathSearch) {
+                    const pathField = row.cs_uri_stem || row.message || '';
+                    if (!pathField.toLowerCase().includes(pathSearch)) {
+                        return false;
+                    }
+                }
+
+                // Method filter
+                if (methodSearch) {
+                    const method = row.cs_method || '';
+                    if (!method.toLowerCase().includes(methodSearch)) {
+                        return false;
+                    }
+                }
+
+                // Status filter
+                if (statusSearch) {
+                    const status = row.sc_status || row.s_port || '';
+                    if (!String(status).includes(statusSearch)) {
+                        return false;
+                    }
+                }
+
+                // IP filter
+                if (ipSearch) {
+                    const ip = row.c_ip || row.s_ip || '';
+                    if (!ip.includes(ipSearch)) {
+                        return false;
+                    }
+                }
+
+                // Global search
+                if (globalSearch) {
+                    const allValues = Object.values(row).join(' ').toLowerCase();
+                    if (!allValues.includes(globalSearch)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            });
+
+            updateStats();
+            renderTable();
+        }
+
+        function resetFilters() {
+            document.getElementById('globalSearch').value = '';
+            document.getElementById('formatFilter').value = 'all';
+            document.getElementById('dateFrom').value = '';
+            document.getElementById('dateTo').value = '';
+            document.getElementById('pathSearch').value = '';
+            document.getElementById('methodSearch').value = '';
+            document.getElementById('statusSearch').value = '';
+            document.getElementById('ipSearch').value = '';
+            
+            document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
+            
+            filteredData = allData;
+            updateStats();
+            renderTable();
+        }
+
+        function renderTable() {
+            if (filteredData.length === 0) {
+                document.getElementById('tableBody').innerHTML = '<tr><td colspan="10">No data to display</td></tr>';
+                document.getElementById('resultCount').textContent = 'No results found';
+                return;
+            }
+
+            // Get format filter to determine which columns to show
+            const formatFilter = document.getElementById('formatFilter').value;
+
+            // Get all unique columns from filtered data
+            const columns = new Set();
+            filteredData.forEach(row => {
+                Object.keys(row).forEach(key => columns.add(key));
+            });
+
+            // Build column array, always start with file and format
+            let columnArray = ['file', 'format'];
+            
+            // Add remaining columns based on format filter
+            const remainingCols = Array.from(columns).filter(c => c !== 'file' && c !== 'format');
+            
+            if (formatFilter === 'w3svc') {
+                // Show w3svc-relevant columns first
+                const w3svcCols = ['timestamp', 'date', 'time', 's_ip', 'cs_method', 'cs_uri_stem', 'cs_uri_query', 's_port', 'c_ip', 'sc_status'];
+                w3svcCols.forEach(col => {
+                    if (remainingCols.includes(col)) columnArray.push(col);
+                });
+                // Add any remaining columns
+                remainingCols.forEach(col => {
+                    if (!columnArray.includes(col)) columnArray.push(col);
+                });
+            } else if (formatFilter === 'trace') {
+                // Show trace-relevant columns first
+                const traceCols = ['timestamp', 'level', 'message', 'function', 'system_name', 'has_params'];
+                traceCols.forEach(col => {
+                    if (remainingCols.includes(col)) columnArray.push(col);
+                });
+                // Add any remaining columns
+                remainingCols.forEach(col => {
+                    if (!columnArray.includes(col)) columnArray.push(col);
+                });
+            } else {
+                // All formats - show timestamp first, then everything else
+                if (remainingCols.includes('timestamp')) columnArray.push('timestamp');
+                remainingCols.forEach(col => {
+                    if (col !== 'timestamp' && !columnArray.includes(col)) columnArray.push(col);
+                });
+            }
+
+            // Render header
+            const header = document.getElementById('tableHeader');
+            header.innerHTML = columnArray.map(col => 
+                `<th onclick="sortTable('${col}')">${col} ${sortColumn === col ? (sortAscending ? '▲' : '▼') : ''}</th>`
+            ).join('');
+
+            // Render body
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = filteredData.slice(0, 1000).map(row => {
+                const cells = columnArray.map(col => {
+                    let value = row[col] || '';
+                    let className = '';
+
+                    if (col === 'file') {
+                        value = `<span class="file-badge">${value}</span>`;
+                    } else if (col === 'format') {
+                        className = 'file-badge';
+                    } else if (col === 'timestamp') {
+                        className = 'timestamp';
+                    } else if (col === 'cs_method') {
+                        className = `method-${value}`;
+                    } else if (col === 'sc_status') {
+                        const statusCode = parseInt(value);
+                        if (statusCode >= 200 && statusCode < 300) className = 'status-2xx';
+                        else if (statusCode >= 300 && statusCode < 400) className = 'status-3xx';
+                        else if (statusCode >= 400 && statusCode < 500) className = 'status-4xx';
+                        else if (statusCode >= 500) className = 'status-5xx';
+                    }
+
+                    return `<td class="${className}">${value}</td>`;
+                }).join('');
+
+                return `<tr>${cells}</tr>`;
+            }).join('');
+
+            const displayCount = Math.min(filteredData.length, 1000);
+            document.getElementById('resultCount').innerHTML = 
+                `Showing <strong>${displayCount}</strong> of <strong>${filteredData.length.toLocaleString()}</strong> results` +
+                (filteredData.length > 1000 ? ' (limited to first 1000 rows)' : '');
+        }
+
+        function sortTable(column) {
+            if (sortColumn === column) {
+                sortAscending = !sortAscending;
+            } else {
+                sortColumn = column;
+                sortAscending = true;
+            }
+
+            filteredData.sort((a, b) => {
+                const aVal = a[column] || '';
+                const bVal = b[column] || '';
+                
+                if (aVal < bVal) return sortAscending ? -1 : 1;
+                if (aVal > bVal) return sortAscending ? 1 : -1;
+                return 0;
+            });
+
+            renderTable();
+        }
+
+        // Debounce for text inputs
+        function debounce(func, wait) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+
+        const debouncedFilter = debounce(applyFilters, 300);
+
+        // Add event listeners for auto-filter on text input
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('globalSearch').addEventListener('input', debouncedFilter);
+            document.getElementById('formatFilter').addEventListener('change', applyFilters);
+            document.getElementById('pathSearch').addEventListener('input', debouncedFilter);
+            document.getElementById('methodSearch').addEventListener('input', debouncedFilter);
+            document.getElementById('statusSearch').addEventListener('input', debouncedFilter);
+            document.getElementById('ipSearch').addEventListener('input', debouncedFilter);
+            document.getElementById('dateFrom').addEventListener('change', applyFilters);
+            document.getElementById('dateTo').addEventListener('change', applyFilters);
+            
+            loadData();
+        });
+    </script>
+</body>
+</html>
