@@ -97,3 +97,4 @@ python app.py test_logs
 - 500MB raw logs → ~100MB parsed in Python
 - ~100MB loaded in browser
 - Suitable for up to ~1GB of raw logs
+# iis_logs_dashboard
